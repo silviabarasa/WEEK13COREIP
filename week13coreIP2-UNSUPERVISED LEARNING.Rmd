@@ -1,0 +1,798 @@
+---
+title: "WEEK13COREIP"
+author: "Silvia Wakasa Barasa"
+date: "9/7/2021"
+output: html_document
+---
+
+```{r}
+library(knitr)
+```
+
+```{r setup, include=TRUE}
+knitr::opts_chunk$set(echo = TRUE,eval=TRUE)
+```
+
+# **PROBLEM DEFINITION**
+## **a) Specifying the Question**
+
+Perform clustering stating insights drawn from your analysis and visualizations.
+
+## **b) Defining the metrics for success**
+
+Bivariates and univariate Exploratory data analysis Perform clustering stating insights drawn from your analysis and visualizations. Upon implementation, provide comparisons between the approaches learned this week i.e. K-Means clustering vs Hierarchical clustering highlighting the strengths and limitations of each approach in the context of your analysis.
+
+## **c) Understanding the context**
+
+Kira Plastinina is a Russian brand that is sold through a defunct chain of retail stores in Russia, Ukraine, Kazakhstan, Belarus, China, Philippines, and Armenia. The brand’s Sales and Marketing team would like to understand their customer’s behavior from data that they have collected over the past year. More specifically, they would like to learn the characteristics of customer groups.
+
+## **d) Recording the Experimental Design**
+
+* Define the question, the metric for success, the context, experimental design taken.
+* Read and explore the given dataset.
+* Find and deal with outliers, anomalies, and missing data within the dataset.
+* Perform univariate and bivariate analysis.
+* Perform clustering stating insights drawn from your analysis and visualizations.
+
+## **e) Relevance of the data**
+The data used for this project is necessary for understanding their customer’s behavior from data that they have collected over the past year. More specifically, to learn the characteristics of customer groups.
+
+*[http://bit.ly/EcommerceCustomersDataset]*.
+
+## **DATA ANALYSIS**
+## **DATA SOURCING**
+
+```{r}
+#install.packages("relaimpo",dependencies = TRUE,repos = 'http://cran.rstudio.com/')
+#install.packages("psych",dependencies = TRUE,repos = 'http://cran.rstudio.com/')
+```
+
+
+```{r}
+# loading libraries
+#library(relaimpo)
+```
+```{r}
+library(data.table)
+library(ggplot2) # Data visualization
+library(dplyr) # Data manipulation
+library(psych) # Will be used for correlation visualization
+#library(ggthemes) # Plot themes
+#library(plotly) # Interactive data visualizations
+```
+## **Importing data**
+```{r}
+# importing our data
+# reading our data
+com <- read.csv('http://bit.ly/EcommerceCustomersDataset')
+com
+```
+## **Data Checking**
+#### **Previewing the top 6 entries**
+
+```{r}
+head(com)
+```
+
+#### **Previewing the bottom 6 entries**
+```{r}
+tail(com)
+```
+
+#### **Previewing the columns of our dataset**
+```{r}
+names(com)
+```
+#### **Previewing the datatypes of our columns**
+```{r}
+lapply(com,class)
+```
+#### **Previewing the shape of our dataset
+```{r}
+dim(com)
+```
+## **Data Clening
+#### **Checking for null values**
+```{r}
+colSums(is.na(com))
+```
+#### **plotting null values**
+```{r}
+#install.packages("DataExplorer",dependencies = TRUE, repos = 'http://cran.rstudio.com/')
+```
+
+```{r}
+library(DataExplorer)
+plot_missing(com)  #Are there missing values,and what is the missing data profile?
+```
+
+#### **Imputing missing Values**
+```{r}
+getmode <- function(v){
+  v=v[nchar(as.character(v))>0]
+  uniqv <- unique(v)
+  uniqv[which.max(tabulate(match(v, uniqv)))]
+}
+```
+
+```{r}
+for (cols in colnames(com)) {
+  if (cols %in% names(com[,sapply(com, is.numeric)])) {
+    com<-com%>%mutate(!!cols := replace(!!rlang::sym(cols), is.na(!!rlang::sym(cols)), mean(!!rlang::sym(cols), na.rm=TRUE)))
+
+  }
+  else {
+
+    com<-com%>%mutate(!!cols := replace(!!rlang::sym(cols), !!rlang::sym(cols)=="", getmode(!!rlang::sym(cols))))
+
+  }
+}
+```
+
+```{r}
+colSums(is.na(com))
+```
+#### ***Checking for duplicates***
+```{r}
+sum(duplicated(com))
+```
+We can see 119 rows are duplicated so we have to drop the dplicates
+
+#### ***removing the duplicates***
+```{r}
+com1<-distinct(com) #Remove duplicated rows using dplyr
+```
+
+```{r}
+sum(duplicated(com1))
+```
+### ***checking for outliers***
+```{r}
+boxplot(com1$Administrative,main="Boxplot for Administrative",col = "cyan")
+boxplot(com1$Administrative_Duration,main="Boxplot for Administrative_Duration",col = "cyan")
+boxplot(com1$Informational,main="Boxplot for Informational",col = "cyan")
+boxplot(com1$Informational_Duration,main="Boxplot for Informational_Duration",col = "cyan")
+boxplot(com1$ProductRelated,main="Boxplot for ProductRelated",col = "cyan")
+boxplot(com1$ProductRelated_Duration,main="Boxplot for ProductRelated_Duration",col = "cyan")
+boxplot(com1$BounceRates,main="Boxplot for BounceRates",col = "cyan")
+boxplot(com1$ExitRates,main="Boxplot for ExitRates",col = "cyan")
+boxplot(com1$PageValues,main="Boxplot for PageValues",col = "cyan")
+boxplot(com1$SpecialDay,main="Boxplot for SpecialDay",col = "cyan")
+#boxplot(com1$Month,main="Boxplot for Month",col = "cyan")
+boxplot(com1$OperatingSystems,main="Boxplot for OperatingSystems",col = "cyan")
+boxplot(com1$OperatingSystems,main="Boxplot for OperatingSystems",col = "cyan")
+boxplot(com1$Browser,main="Boxplot for Browser",col = "cyan")
+boxplot(com1$Region,main="Boxplot for Region",col = "cyan")
+boxplot(com1$Region,main="Boxplot for Region",col = "cyan")
+boxplot(com1$TrafficType,main="Boxplot for TrafficType",col = "cyan")
+#boxplot(com1$VisitorType,main="Boxplot for VisitorType",col = "cyan")
+boxplot(com1$Weekend,main="Boxplot for Weekend",col = "cyan")
+boxplot(com1$Revenue,main="Boxplot for Revenue",col = "cyan")
+```
+## ***4. Univariate Analysis***
+### ***4.1. Measures of central Tendency***
+##### ***4.1.1. Mean***
+```{r}
+library(dbplyr)
+```
+```{r}
+names(com1)
+```
+```{r}
+cat("The mean for Administrative is",mean(com$Administrative))
+cat("\n")
+cat("The mean for Administrative_Duration is",mean(com$Administrative_Duration))
+cat("\n")
+cat("The mean for Informational is",mean(com$Informational))
+cat("\n")
+cat("The mean for Informational_Duration is",mean(com$Informational_Duration))
+cat("\n")
+cat("The mean for ProductRelated is",mean(com$ProductRelated))
+cat("\n")
+cat("The mean for ProductRelated_Duration is",mean(com$ProductRelated_Duration))
+cat("\n")
+cat("The mean for BounceRates is",mean(com$BounceRates))
+cat("\n")
+cat("The mean for ExitRates is",mean(com$ExitRates))
+cat("\n")
+cat("The mean for PageValues is",mean(com$PageValues))
+cat("\n")
+cat("The mean for SpecialDay is",mean(com$SpecialDay))
+cat("\n")
+#cat("The mean for Month is",mean(com$Month))
+cat("\n")
+cat("The mean for OperatingSystems is",mean(com$OperatingSystems))
+cat("\n")
+cat("The mean for Browser is",mean(com$Browser))
+cat("\n")
+cat("The mean for Region is",mean(com$Region))
+cat("\n")
+cat("The mean for TrafficType is",mean(com$TrafficType))
+cat("\n")
+#cat("The mean for VisitorType is",mean(com$VisitorType))
+cat("\n")
+cat("The mean for Weekend is",mean(com$Weekend))
+cat("\n")
+cat("The mean for Revenue is",mean(com$Revenue))
+cat("\n")
+```
+##### ***4.1.1. Median***
+
+```{r}
+cat("The median for Administrative is",median(com$Administrative))
+cat("\n")
+cat("The median for Administrative_Duration is",mean(com$Administrative_Duration))
+cat("\n")
+cat("The median for Informational is",median(com$Informational))
+cat("\n")
+cat("The median for Informational_Duration is",mean(com$Informational_Duration))
+cat("\n")
+cat("The median for ProductRelated is",median(com$ProductRelated))
+cat("\n")
+cat("The median for ProductRelated_Duration is",median(com$ProductRelated_Duration))
+cat("\n")
+cat("The median for BounceRates is",median(com$BounceRates))
+cat("\n")
+cat("The median for ExitRates is",median(com$ExitRates))
+cat("\n")
+cat("The median for PageValues is",median(com$PageValues))
+cat("\n")
+cat("The median for SpecialDay is",median(com$SpecialDay))
+cat("\n")
+#cat("The median for Month is",median(com$Month))
+cat("\n")
+cat("The median for OperatingSystems is",median(com$OperatingSystems))
+cat("\n")
+cat("The median for Browser is",median(com$Browser))
+cat("\n")
+cat("The median for Region is",median(com$Region))
+cat("\n")
+cat("The median for TrafficType is",median(com$TrafficType))
+cat("\n")
+#cat("The median for VisitorType is",median(com$VisitorType))
+cat("\n")
+cat("The median for Weekend is",median(com$Weekend))
+cat("\n")
+cat("The median for Revenue is",median(com$Revenue))
+cat("\n")
+```
+#### ***Mode***
+```{r}
+#Creating a function for the mode
+getmode <- function(v) {
+   uniqv <- unique(v)
+   uniqv[which.max(tabulate(match(v, uniqv)))]
+}
+```
+
+```{r}
+cat("The mode for Administrative is",getmode(com$Administrative))
+cat("\n")
+cat("The mode for Administrative_Duration is",getmode(com$Administrative_Duration))
+cat("\n")
+cat("The mode for Informational is",getmode(com$Informational))
+cat("\n")
+cat("The mode for Informational_Duration is",getmode(com$Informational_Duration))
+cat("\n")
+cat("The mode for ProductRelated is",getmode(com$ProductRelated))
+cat("\n")
+cat("The mode for ProductRelated_Duration is",getmode(com$ProductRelated_Duration))
+cat("\n")
+cat("The mode for BounceRates is",getmode(com$BounceRates))
+cat("\n")
+cat("The mode for ExitRates is",getmode(com$ExitRates))
+cat("\n")
+cat("The mode for PageValues is",getmode(com$PageValues))
+cat("\n")
+cat("The mode for SpecialDay is",getmode(com$SpecialDay))
+cat("\n")
+#cat("The mode for Month is",getmode(com$Month))
+cat("\n")
+cat("The mode for OperatingSystems is",getmode(com$OperatingSystems))
+cat("\n")
+cat("The mode for Browser is",getmode(com$Browser))
+cat("\n")
+cat("The mode for Region is",getmode(com$Region))
+cat("\n")
+cat("The mode for TrafficType is",getmode(com$TrafficType))
+cat("\n")
+#cat("The mode for VisitorType is",getmode(com$VisitorType))
+cat("\n")
+#cat("The mode for Weekend is",getmode(com$Weekend))
+#cat("\n")
+#cat("The mode for Revenue is",getmode(com$Revenue))
+#cat("\n")
+```
+#### **Standard Deviation***
+```{r}
+head(com)
+```
+
+```{r}
+cat("The standard deviation for Administrative is",sd(com$Administrative))
+cat("\n")
+cat("The standard deviation for Administrative_Duration is",sd(com$Administrative_Duration))
+cat("\n")
+cat("The standard deviation for Informational is",sd(com$Informational))
+cat("\n")
+cat("The standard deviation for Informational_Duration is",sd(com$Informational_Duration))
+cat("\n")
+cat("The standard deviation for ProductRelated is",sd(com$ProductRelated))
+cat("\n")
+cat("The standard deviation for ProductRelated_Duration is",sd(com$ProductRelated_Duration))
+cat("\n")
+cat("The standard deviation for BounceRates is",sd(com$BounceRates))
+cat("\n")
+cat("The standard deviation for ExitRates is",sd(com$ExitRates))
+cat("\n")
+cat("The standard deviation for PageValues is",sd(com$PageValues))
+cat("\n")
+cat("The standard deviation for SpecialDay is",sd(com$SpecialDay))
+cat("\n")
+cat("The standard deviation for OperatingSystems is",sd(com$OperatingSystems))
+cat("\n")
+cat("The standard deviation for Browser is",sd(com$Browser))
+cat("\n")
+cat("The standard deviation for Region is",sd(com$Region))
+cat("\n")
+cat("The standard deviation for TrafficType is",sd(com$TrafficType))
+cat("\n")
+```
+#### ***Variance***
+```{r}
+cat("The Variance for Administrative is",var(com$Administrative))
+cat("\n")
+cat("The Variance for Administrative_Duration is",var(com$Administrative_Duration))
+cat("\n")
+cat("The Variance for Informational is",var(com$Informational))
+cat("\n")
+cat("The Variance for Informational_Duration is",var(com$Informational_Duration))
+cat("\n")
+cat("The Variance for ProductRelated is",var(com$ProductRelated))
+cat("\n")
+cat("The Variance for ProductRelated_Duration is",var(com$ProductRelated_Duration))
+cat("\n")
+cat("The Variance for BounceRates is",var(com$BounceRates))
+cat("\n")
+cat("The Variance for ExitRates is",var(com$ExitRates))
+cat("\n")
+cat("The Variance for PageValues is",var(com$PageValues))
+cat("\n")
+cat("The Variance for SpecialDay is",var(com$SpecialDay))
+cat("\n")
+cat("The Variance for OperatingSystems is",var(com$OperatingSystems))
+cat("\n")
+cat("The Variance for Browser is",var(com$Browser))
+cat("\n")
+cat("The Variance for Region is",var(com$Region))
+cat("\n")
+cat("The Variance for TrafficType is",var(com$TrafficType))
+cat("\n")
+```
+### ***Measures of Dispersion***
+#### ***Minimum***
+```{r}
+library(dplyr)
+com1 %>% summarise_if(is.numeric,min)
+```
+#### ***Maximum***
+```{r}
+#Maximum of the columns
+com1 %>% summarise_if(is.numeric,max)
+```
+#### ***Range***
+```{r}
+cat("The range for Administrative is",range(com$Administrative))
+cat("\n")
+cat("The range for Administrative_Duration is",range(com$Administrative_Duration))
+cat("\n")
+cat("The range for Informational is",range(com$Informational))
+cat("\n")
+cat("The range for Informational_Duration is",range(com$Informational_Duration))
+cat("\n")
+cat("The range for ProductRelated is",range(com$ProductRelated))
+cat("\n")
+cat("The range for ProductRelated_Duration is",range(com$ProductRelated_Duration))
+cat("\n")
+cat("The range for BounceRates is",range(com$BounceRates))
+cat("\n")
+cat("The range for ExitRates is",range(com$ExitRates))
+cat("\n")
+cat("The range for PageValues is",range(com$PageValues))
+cat("\n")
+cat("The range for SpecialDay is",range(com$SpecialDay))
+cat("\n")
+cat("The range for OperatingSystems is",range(com$OperatingSystems))
+cat("\n")
+cat("The range for Browser is",range(com$Browser))
+cat("\n")
+cat("The range for Region is",range(com$Region))
+cat("\n")
+cat("The range for TrafficType is",range(com$TrafficType))
+cat("\n")
+```
+#### ***Quantile***
+```{r}
+cat("The quantile for Administrative is",quantile(com$Administrative))
+cat("\n")
+cat("The quantile for Administrative_Duration is",quantile(com$Administrative_Duration))
+cat("\n")
+cat("The quantile for Informational is",quantile(com$Informational))
+cat("\n")
+cat("The quantile for Informational_Duration is",range(com$Informational_Duration))
+cat("\n")
+cat("The quantile for ProductRelated is",quantile(com$ProductRelated))
+cat("\n")
+cat("The quantile for ProductRelated_Duration is",quantile(com$ProductRelated_Duration))
+cat("\n")
+cat("The quantile for BounceRates is",quantile(com$BounceRates))
+cat("\n")
+cat("The quantile for ExitRates is",quantile(com$ExitRates))
+cat("\n")
+cat("The quantile for PageValues is",quantile(com$PageValues))
+cat("\n")
+cat("The quantile for SpecialDay is",quantile(com$SpecialDay))
+cat("\n")
+cat("The quantile for OperatingSystems is",quantile(com$OperatingSystems))
+cat("\n")
+cat("The quantile for Browser is",quantile(com$Browser))
+cat("\n")
+cat("The quantile for Region is",quantile(com$Region))
+cat("\n")
+cat("The quantile for TrafficType is",quantile(com$TrafficType))
+cat("\n")
+```
+#### Summary
+```{r}
+summary(com1)
+```
+#### ***Barcharts***
+```{r}
+frequency <- table(com1$Weekend)
+frequency
+barplot(frequency,col=c("Cyan","lightgreen"),main="Barchart for Weekend",xlab = "weekend",ylab = "Total Count")
+```
+```{r}
+frequency <- table(com1$Revenue)
+frequency
+barplot(frequency,col=c("Cyan","lightgreen"),main="Barchart for Revenue",xlab = "Revenue",ylab = "Total Count")
+```
+
+```{r}
+frequency <- table(com1$VisitorType)
+frequency
+barplot(frequency,col=c("Cyan","lightgreen"),main="Barchart for VisitorType",xlab = "VisitorType",ylab = "Total Count")
+```
+
+```{r}
+frequency <- table(com1$Month)
+frequency
+barplot(frequency,col=c("Cyan","lightgreen"),main="Barchart for Month",xlab = "Month",ylab = "Total Count")
+```
+#### ***Histograms***
+```{r}
+library(ggplot2)
+ggplot(com1, aes( Administrative)) + geom_histogram(bins = 20, color = 'cyan') + 
+    labs(title = ' Administrative distribution', x = ' Administrative', y = 'Frequency')
+```
+```{r}
+library(ggplot2)
+ggplot(com1, aes( Administrative_Duration)) + geom_histogram(bins = 20, color = 'cyan') + 
+    labs(title = ' Administrative_Duration distribution', x = 'Administrative_Duration', y = 'Frequency')
+```
+
+```{r}
+library(ggplot2)
+ggplot(com1, aes(Informational)) + geom_histogram(bins = 20, color = 'cyan') + 
+    labs(title = ' Informational distribution', x = 'Informational', y = 'Frequency')
+```
+   
+```{r}
+library(ggplot2)
+ggplot(com1, aes(ProductRelated)) + geom_histogram(bins = 20, color = 'cyan') + 
+    labs(title = 'ProductRelated', x = 'ProductRelated', y = 'Frequency')
+```
+
+```{r}
+library(ggplot2)
+ggplot(com1, aes(ProductRelated_Duration)) + geom_histogram(bins = 20, color = 'cyan') + 
+    labs(title = 'ProductRelated_Duration', x = 'ProductRelated_Duration', y = 'Frequency')
+```
+                 
+```{r}
+library(ggplot2)
+ggplot(com1, aes(BounceRates)) + geom_histogram(bins = 20, color = 'cyan') + 
+    labs(title = ' BounceRates', x = 'BounceRates', y = 'Frequency')
+```
+
+```{r}
+library(ggplot2)
+ggplot(com1, aes(ExitRates)) + geom_histogram(bins = 20, color = 'cyan') + 
+    labs(title = 'ExitRates', x = 'ExitRates', y = 'Frequency')
+```
+
+```{r}
+library(ggplot2)
+ggplot(com1, aes(PageValues)) + geom_histogram(bins = 20, color = 'cyan') + 
+    labs(title = 'PageValues', x = 'PageValues', y = 'Frequency')
+```
+### **Bivariate Analysis**
+
+#### **Covariance**
+```{r}
+cat("The covariance for Administrative and Administrative_Duration is",cov(com1$Administrative,com1$Administrative_Duration))
+cat("\n")
+cat("The covariance for Informational and Informational_Duration is",cov(com1$Informational,com1$Informational_Duration))
+cat("\n")
+cat("The covariance for ProductRelated and ProductRelated_Duration is",cov(com1$ProductRelated,com1$ProductRelated_Duration))
+cat("\n")
+cat("The covariance for BounceRates and ExitRates is",cov(com1$BounceRates,com1$ExitRates))
+cat("\n")
+cat("The covariance for PageValues and SpecialDay is",cov(com1$PageValues,com1$SpecialDay))
+cat("\n")
+cat("The covariance for OperatingSystems and Browser is",cov(com1$OperatingSystems,com1$Browser))
+cat("\n")
+cat("The covariance for Region and TrafficType is",cov(com1$Region,com1$TrafficType))
+cat("\n")
+```
+```{r}
+#### **Correlation**
+install.packages("corrplot")
+library(corrplot)
+```
+
+```{r}
+#Correlation of all numeric variables
+cat("The correlation for Administrative and Administrative_Duration is",cor(com1$Administrative,com1$Administrative_Duration))
+cat("\n")
+cat("The correlation for Informational and Informational_Duration is",cor(com1$Informational,com1$Informational_Duration))
+cat("\n")
+cat("The correlation for ProductRelated and ProductRelated_Duration is",cor(com1$ProductRelated,com1$ProductRelated_Duration))
+cat("\n")
+cat("The correlation for BounceRates and ExitRates is",cor(com1$BounceRates,com1$ExitRates))
+cat("\n")
+cat("The correlation for PageValues and SpecialDay is",cor(com1$PageValues,com1$SpecialDay))
+cat("\n")
+cat("The correlation for OperatingSystems and Browser is",cor(com1$OperatingSystems,com1$Browser))
+cat("\n")
+cat("The correlation for Region and TrafficType is",cor(com1$Region,com1$TrafficType))
+cat("\n")
+```
+```{r}
+com_cor <- subset(com1, select = c(Administrative,Administrative_Duration,Informational,         Informational_Duration,ProductRelated,ProductRelated_Duration,BounceRates,ExitRates,PageValues,SpecialDay,OperatingSystems,Browser,Region,TrafficType ))
+names(com_cor)
+```
+
+#### **Scatter plots**
+```{r}
+#Scatter plot for Administrative vs Administrative_Duration
+ggplot(com1, aes(x = `Administrative`, y = `Administrative_Duration` )) +
+  geom_point() + labs(title = 'Scatter plot for Administrative vs Administrative_Duration')
+```
+```{r}
+#Scatter plot for Informational vs Informational_Duration
+ggplot(com1, aes(x = `Informational`, y = `Informational_Duration` )) +
+  geom_point() + labs(title = 'Scatter plot for Informational vs Informational_Duration')
+```
+```{r}
+#Scatter plot for ProductRelated vs ProductRelated_Duration
+ggplot(com1, aes(x = `ProductRelated`, y = `ProductRelated_Duration` )) +
+  geom_point() + labs(title = 'Scatter plot for ProductRelated vs ProductRelated_Duration')
+```
+```{r}
+#Scatter plot for  BounceRates vs ExitRates
+ggplot(com1, aes(x = `BounceRates`, y = `ExitRates` )) +
+  geom_point() + labs(title = 'Scatter plot for BounceRates vs ExitRates')
+```
+```{r}
+ggplot(com1, aes(x = BounceRates, y = ExitRates, col=Weekend),add ="reg.line",conf.int = TRUE) +geom_point()+geom_smooth()+ labs(title = 'Scatter plot age vs area in income')
+```
+
+**Bounce rates per month**
+```{r}
+com1 %>% group_by(Month, BounceRates)%>% head(10)%>% arrange(desc(BounceRates))
+```
+* February had the highest number of bounce rates while november had the lowest number.
+
+** Bounce rates per visitor **
+```{r}
+com1 %>% group_by(VisitorType, BounceRates)%>% head(10)%>% arrange(desc(BounceRates))
+```
+* Returning visitor had the highest bouncing rates.
+
+## IMPLEMENTING THE SOLUTION
+
+##### **Label encoding**
+```{r}
+#install.packages("superml",dependencies = TRUE, repos = 'http://cran.rstudio.com/')
+```
+```{r}
+head(com1)
+```
+```{r}
+com1$Weekend<- as.numeric(com1$Weekend)
+com1$Revenue<- as.numeric(com1$Revenue)
+```
+
+```{r}
+library(superml)
+print("Data before label encoding..\n")
+print(com1)
+label <- LabelEncoder$new()
+#Label encoding
+#com1$Month <- label$fit_transform(com1$Month)
+print(com1$Month)
+#com1$VisitorType <- label$fit_transform(com1$VisitorType)
+print(com1$VisitorType)
+#com1$Weekend <- label$fit_transform(com1$Weekend)
+#print(com1$Weekend)
+#com1$Revenue <- label$fit_transform(com1$Revenue)
+#print(com1$Revenue)
+#print("Data after label encoding..\n")
+print(com1)
+```
+```{r}
+names(com1)
+```
+#### K MEANS CLUSTERING
+```{r}
+# Preprocessing the dataset
+# ---
+# Since clustering is a type of Unsupervised Learning, 
+# we would not require Class Label(output) during execution of our algorithm. 
+# We will, therefore, remove Class Attribute “Species” and store it in another variable. 
+# We would then normalize the attributes between 0 and 1 using our own function.
+# ---
+#
+com.new<- com1[, c(4,5, 6, 9)]
+com.new
+com.class<- com1[, "Revenue"]
+head(com.new)
+```
+```{r}
+com2<-select(com1,Informational_Duration,ProductRelated,ProductRelated_Duration,PageValues)
+```
+
+```{r}
+# Normalizing the dataset so that no particular attribute 
+# has more impact on clustering algorithm than others.
+# ---
+# 
+normalize <- function(x){
+  return ((x-min(x)) / (max(x)-min(x)))
+}
+com1$ProductRelated<- normalize(com1$ProductRelated)
+com1$ProductRelated_Duration<- normalize(com1$ProductRelated_Duration)
+com1$PageValues<- normalize(com1$PageValues)
+com1$Informational_Duration<-normalize(com1$Informational_Duration)
+
+```
+
+```{r}
+# Applying the K-means clustering algorithm with no. of centroids(k)=3
+result<- kmeans(com.new,3) 
+result
+# Previewing the no. of records in each cluster
+result$size 
+```
+
+```{r}
+# Getting the value of cluster center datapoint value(3 centers for k=3)
+result$centers 
+```
+
+```{r}
+# Getting the cluster vector that shows the cluster where each record falls
+result$cluster
+```
+
+```{r}
+# Visualizing the  clustering results
+par(mfrow = c(1,2), mar = c(5,4,2,2))
+
+# Plotting to see how Administrative and Administrative_Duration data points have been distributed in clusters
+plot(com2[,1:2], col = result$cluster) 
+```
+
+```{r}
+# Verifying the results of clustering
+
+par(mfrow = c(2,2), mar = c(5,4,2,2))
+
+# Plotting to see how Sepal.Length and Sepal.Width data points have been distributed in clusters
+plot(com.new[c(1,2)], col = result$cluster)
+
+# Plotting to see how Sepal.Length and Sepal.Width data points have been distributed 
+# originally as per "class" attribute in dataset
+# ---
+#
+plot(com.new[c(1,2)], col = com.class)
+# Plotting to see how Petal.Length and Petal.Width data points have been distributed in clusters
+# ---
+# 
+plot(com.new[c(3,4)], col = result$cluster)
+plot(com.new[c(3,4)], col = com.class)
+```
+
+```{r}
+# Result of table shows that Cluster 1 corresponds to True, 
+# Cluster 2 corresponds to False .
+table(result$cluster, com.class)
+```
+
+
+* In order to improve this accuracy further, we may try different values of “k”. In some cases, it is also beneficial to change the algorithm in case k-means is unable to yield good results.
+
+#### Hierachical Clustering
+```{r}
+com2<-select(com1,Informational_Duration,ProductRelated,ProductRelated_Duration,PageValues)
+```
+
+```{r}
+# As we don’t want the hierarchical clustering result to depend to an arbitrary variable unit, 
+# we start by scaling the data using the R function scale() as follows
+co1 <- scale(com2)
+head(co1)
+```
+
+```{r}
+# We now use the R function hclust() for hierarchical clustering
+ # First we use the dist() function to compute the Euclidean distance between observations, 
+# d will be the first argument in the hclust() function dissimilarity matrix
+
+d <- dist(co1, method = "euclidean")
+d
+```
+
+```{r}
+# We then hierarchical clustering using the Ward's method
+# ---
+# 
+res.hc <- hclust(d, method = "ward.D2" )
+res.hc
+```
+
+#### DBSCAN CLUSTERING
+```{r}
+# Loading the required library
+library("dbscan")
+```
+
+```{r}
+# Removing the class label 
+m2<-com1[,c(4,5,6,9)]
+head(m2)
+```
+
+```{r}
+# Applying our DBSCAN algorithm
+# We want minimum 4 points with in a distance of eps(0.4)
+# 
+db1<-dbscan(m2,eps=0.4,MinPts = 4)
+```
+
+```{r}
+# Printing out the clustering results
+print(db1)
+```
+
+```{r}
+# We also plot our clusters as shown
+# ---
+# The dataset and cluster method of dbscan is used to plot the clusters.
+# 
+hullplot(m2,db1$cluster)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
